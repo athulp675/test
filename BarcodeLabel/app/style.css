@@ -1,0 +1,38 @@
+.form-control{
+    width : 60%;
+    margin-left: 5%;
+}
+.btn{
+    margin-top: 20px;
+   /* margin-left: 25%; */
+    margin-bottom: 10px;
+}
+.container{
+    border: solid;
+}
+table {
+    border-collapse: collapse; /* This ensures that adjacent cell borders merge */
+    width: 100%;
+  }
+  th, td {
+    border: 1px solid black; /* Add a 1px solid border to all table cells */
+    padding: 8px;
+    text-align: left;
+  }
+  th {
+    background-color: #f2f2f2; /* Optional background color for headers */
+  }
+  .podetails{
+    border: 1px solid black;
+    text-align: center;
+    background-color: aliceblue;
+  }
+  thead{
+    background-color: #98E4FF;
+  }
+  tbody{
+    background-color: aliceblue;
+  }
+  h2{
+    text-align: center;
+  }
