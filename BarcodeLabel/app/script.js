@@ -10,6 +10,7 @@ $(document).ready(function () {
         var ponum = queryParams.poNum;
         var customer = queryParams.customer;
         var prepack = queryParams.prepackid;
+        var indbatch = queryParams.batch;
         console.log(ponum);
         console.log(search);
         console.log(prepack);
@@ -139,7 +140,7 @@ $(document).ready(function () {
                         ///Print content concatinate in a long string///
                         //var start =  '\x02'+'m\n'+'\x02L\nD11\nH18';
                         var start =  '~m|\n'+'~L|\nD11|\nH18|';
-                        var printcode = "\n191100202000025"+spaces+pack_date+" "+manu_batch+" "+mrp+"|\n191100101770080"+color_code+"|\n191100101550080"+product_name+"|\n1e6108100720090"+barcode_value+"|\n291100301500335SPH|\n191100300320085 "+batch_serial+"|\n191100100110060*"+bill_details+"*|\n491100100200050"+item_code+"|\n491100200470080"+pack_code+"|";
+                        var printcode = "\n191100202000025"+spaces+pack_date+" "+manu_batch+" "+mrp+"|\n191100101770080"+color_code+"|\n191100101550080"+product_name+"|\n1e6108100720090"+barcode_value+"|\n291100301500335SPH|\n191100300320085 "+batch_serial+"|\n191100100110060*"+bill_detzeails+"*|\n491100100200050"+item_code+"|\n491100200470080"+pack_code+"|";
                         var eject = "\nQ0001|\nE|";
                         var next = "\nC0420|";
                         var contentToPrint ;
@@ -469,13 +470,14 @@ $(document).ready(function () {
               
                     }); 
             }
+            // prepack barcode
             else if(prepack != undefined)
             {
               console.log(prepack);
           ///get prepack details///
               var config = {
               appName: "sph",
-              reportName: "All_Pre_Packings",
+              reportName: "All_Pre_Packings_Widget",
               criteria : `(Pre_Packing_Number == \"${prepack}\")`
               };
               console.log(config);
@@ -487,12 +489,8 @@ $(document).ready(function () {
                 var mainitem = response.data[0].Pre_Packing_Item.ID;
                 var predate = response.data[0].Date_field;
                 var premain = response.data[0].Pre_Packing_Item.display_value;
-                var packitem = {
-                  appName: "sph",
-                  reportName: "All_Pre_packing_Items",
-                  criteria : `(Pre_Packing == ${ppackID})`
-                  };
-                  console.log(packitem);
+                var responseString = response.data[0].Response;
+                  console.log(responseString);
                     //\\\\\prepack contents///\\\\\\\
                     var h5element = document.getElementById("ponumber");
                     var currentText = h5element.textContent;
@@ -503,32 +501,23 @@ $(document).ready(function () {
                     Vh5element.textContent = vnewh5element;
                     console.log(newh5element);
                     h5element.textContent = newh5element;
-                ///\\get composite item\\///
-                  var getRecord = ZOHO.CREATOR.API.getAllRecords(packitem);
-                  getRecord.then(function(response){
-                    console.log(response.data);
-                    var preline = response.data;
-                    preline.forEach(data =>{
-                    var packitem = data.Item.display_value;
-                    console.log(data.Item.display_value);
-                    var itemid = data.Item.ID;
-                    var packQuantity = data.Quantity;
-                    var packSKU = data.SKU.display_value;
-                    console.log(packitem + packQuantity+packSKU);
-                  
-                ///\\get prepack batches//\\\\\
-                var packitem = {
-                  appName: "sph",
-                  reportName: "All_Pre_packing_Batch_Line_Items",
-                  criteria : `(Pre_Packing == ${ppackID} && Item == ${mainitem} )`
-                  };
-                  console.log(packitem);
-                  var getRecord = ZOHO.CREATOR.API.getAllRecords(packitem);
-                  getRecord.then(function(response){
-                    console.log("batch");
-                    console.log(response.data);
-                    var createdbatch = response.data[0].Pre_Batch.display_value;
-                    console.log(createdbatch);
+                    ///map loop///
+                    // Parse the JSON string into a JavaScript object
+var responseObject = JSON.parse(responseString);
+
+// Access data from the JavaScript object
+var packnumber= responseObject.PrePack_Number;
+var packdate= responseObject.PrePack_Date;
+
+// Check if 'Products' array exists before trying to iterate over it
+if (responseObject.Products && Array.isArray(responseObject.Products)) {
+    // Iterate over the 'Products' array
+    responseObject.Products.forEach(function(product) {
+        console.log("Product Name:", product.Product_Name);
+        console.log("SKU:", product.SKU);
+        console.log("Net Weight:", product.Net_Weight);
+        console.log("Batch:", product.Batch);
+        console.log("MRP:", product.MRP);
                     const newHeader = ["Item Description","Batch Serial Number","Print","Nos","Barcode","Pack Date"]
                     const head1 = document.getElementById("head1");
                     const head2 = document.getElementById("head2");
@@ -553,11 +542,11 @@ $(document).ready(function () {
                               const Mrp = document.createElement('td');
                               const packdates = document.createElement('td');
                               // Set the Batch ID cell content
-                              batchIdCell.textContent = createdbatch;
-                              totalBarcode.textContent = packQuantity;
-                              itemDesc.textContent = data.Item.display_value;
-                              Mrp.textContent = packSKU+createdbatch;
-                              packdates.textContent = predate;
+                              batchIdCell.textContent = product.Batch;
+                              totalBarcode.textContent = product.Quantity;
+                              itemDesc.textContent = product.Product_Name;
+                              Mrp.textContent = product.MRP;
+                              packdates.textContent = packdate;
                               // Set the text and click event handler for the Print button
                               printButton.textContent = 'Print';
                               printButton.className = "btn btn-primary print-button";
@@ -574,19 +563,11 @@ $(document).ready(function () {
                               
                               // Append the row to the table body
                               tableBody.appendChild(row);
-                              ///get batch details//
-                              var config = {
-                                appName: "sph",
-                                reportName: "All_Batches",
-                                criteria : `(Batch_Number == \"${createdbatch}\")`
-                                };
-                                console.log(config);
-                                var getRecord = ZOHO.CREATOR.API.getAllRecords(config);
-                                getRecord.then(function(response){
-                                  console.log(response.data);
-                                });
                             });
-                })
+                           
+} else {
+  console.log("Products array is either missing or not an array.");
+}
                       // Event delegation for the "Print" buttons
             const contentDiv = document.getElementById('content');
             const printButton = document.getElementById('print-button');
@@ -595,28 +576,28 @@ $(document).ready(function () {
                // const batchSerialNumber = row.querySelector('td:nth-child(2)').textContent;
                 const batchId = $(this).closest('tr').find('td:nth-child(2)').text();
                 console.log('Batch ID:', batchId);
-                console.log(rcv);
                 ///collect all batch details///
-                preline.forEach(data =>{
-                    var batch_serial = data.Barcode_Value;
-                    console.log( data.Barcode_Value);
+                responseObject.Products.forEach(data =>{
+                    var batch_serial = data.Batch;
+                    console.log( data.Batch);
                     if(batch_serial == batchId)
                     {
                      
-                        var itemcode = "";
-                        var productionOrder = "";
-                        var batchnumber = "";
-                        var itemName = "";
+                        var itemcode =data.Product_Code;
+                        var productionOrder = packnumber;
+                        var batchnumber = batchId;
+                        var itemName = data.Product_Name;
                         var batchDate = "";
-                        var barcodeValue = "";
-                        var MRp = "";
-                        var netWeight = "";
-                        var packDate = "";
-                        var sku_batch = "";
+                        var barcodeValue = data.SKU+data.Batch;
+                        var MRp = data.MRP;
+                        var netWeight = data.Net_Weight;
+                        var packDate = packdate;
+                        var sku_batch = data.SKU;
+                        var numbers = data.Quantity;
                         ///Print content concatinate in a long string///
                         //var start =  '\x02'+'m\n'+'\x02L\nD11\nH18';
                         var start =  '~m|\n'+'~L|\nD11|\nH18|';
-                        var printcode = "\n191100202850045"+itemcode+"|\n191100202850400"+productionOrder+"|\n1e2108102100050#"+barcodeValue+"|\n191100202400300"+sku_batch+"|\n191100202100310"+batchDate+batchId+"|\n191100201750050"+itemName+"|\n191100201450050Item remains|\n191100201150050M.R.P."+MRp+"|\n191100101250280(Inclusive of all taxes)|"+"\n191100100950050"+netWeight+packDate+"|\n191100100700050For Feedback/Complaints  2331257, 2330552|\n191100200400110SANTHA PAINT HOUSE|\n191100100200110G.P.O. JUNCTION, TRIVANDRUM|\n491100100150040Buyers use only, Not for resale|\n291100103100532Buyers use only, Not for resale|";
+                        var printcode = "\n191100202850045"+itemcode+"|\n191100202850400"+productionOrder+"|\n1e2108102100050#"+barcodeValue+"|\n191100202400300"+sku_batch+"|\n191100202100310NODT"+batchId+"|\n191100201750050"+itemName+"|\n191100201450050Item remains|\n191100201150050M.R.P."+MRp+"|\n191100101250280(Inclusive of all taxes)|"+"\n191100100950050"+netWeight+"      Pkd on."+packDate+"|\n191100100700050For Feedback/Complaints  2331257, 2330552|\n191100200400110SANTHA PAINT HOUSE|\n191100100200110G.P.O. JUNCTION, TRIVANDRUM|\n491100100150040Buyers use only, Not for resale|\n291100103100532Buyers use only, Not for resale|";
                         var eject = "\nQ0001|\nE|";
                         var next = "\nC0420|";
                         var contentToPrint ;
@@ -686,12 +667,165 @@ $(document).ready(function () {
                 printWindow.document.close();
                 printWindow.print();
               }
-                  });
+                 
               });
             }
-            
+            // individual barcode
+            else if(indbatch != undefined)
+            {
+              batchconfig = {
+                              appName : "sph",
+                              reportName : "All_Batches_Widget",
+                              id: `${indbatch}`
+                            } 
+            console.log(batchconfig);
+           var getBatch =  ZOHO.CREATOR.API.getRecordById(batchconfig);
+               getBatch.then(function(response){
+              console.log(response.data);
+              var itemid = response.data.Item.ID;
+             var itemconfig = {
+                appName : "sph",
+                reportName : "All_Items",
+                id: `${itemid}`
+              } 
+              var itemBatch =  ZOHO.CREATOR.API.getRecordById(itemconfig);
+              itemBatch.then(function(itemresp){
+                console.log(itemresp);
+                var itemtype = itemresp.Product_Type;
+  
+              var resp = response.data.Response_Json;
+              var responseObject = JSON.parse(resp);
+              // Access data from the JavaScript object
+              if(itemtype != "Prepack")
+              {  
+              var billdate= responseObject.bill_date;
+              console.log(billdate);
+              var recvdate = responseObject.receive_date;
+              // Parse the bill date string into a Date object
+              var dateObj = new Date(billdate);
+
+              // Get the day, month, and year components
+              var day = dateObj.getDate().toString().padStart(2, '0'); // padStart ensures 2 digits
+              var month = (dateObj.getMonth() + 1).toString().padStart(2, '0'); // Month is zero-based
+              var year = dateObj.getFullYear().toString().slice(2); // Get last two digits of the year
+
+              // Combine day, month, and year components
+              var formattedbDate = day + month + year;
+
+              console.log("Formatted Date:", formattedbDate);
+              
+               // Parse the receive date string into a Date object
+               var dateObj = new Date(recvdate);
+
+               // Get the day, month, and year components
+               var day = dateObj.getDate().toString().padStart(2, '0'); // padStart ensures 2 digits
+               var month = (dateObj.getMonth() + 1).toString().padStart(2, '0'); // Month is zero-based
+               var year = dateObj.getFullYear().toString().slice(2); // Get last two digits of the year
+ 
+               // Combine day, month, and year components
+               var formattedrcvDate = day + month + year;
+ 
+               console.log("Formatted Date:", formattedrcvDate);
+                   // Adding values in the table//
+                   const newHeader = ["Item Description","Batch Serial Number","Print","Nos","MRP","Pack Date"]
+                   const head1 = document.getElementById("head1");
+                   const head2 = document.getElementById("head2");
+                   const head3 = document.getElementById("head3");
+                   const head4 = document.getElementById("head4");
+                   const head5 = document.getElementById("head5");
+                   const head6 = document.getElementById("head6");
+                   head1.textContent = newHeader[0];
+                   head2.textContent = newHeader[1];
+                   head3.textContent = newHeader[2];
+                   head4.textContent = newHeader[3];
+                   head5.textContent = newHeader[4];
+                   head6.textContent = newHeader[5];
+                   const tableBody = document.getElementById('table-body');
+                   const row = document.createElement('tr');
+                   const batchIdCell = document.createElement('td');
+                   const printButtonCell = document.createElement('td');
+                   const printButton = document.createElement('button');
+                   const totalBarcode = document.createElement('td');
+                   const itemDesc = document.createElement('td');
+                   const Mrp = document.createElement('td');
+                   const packdates = document.createElement('td');
+                   // Set the Batch ID cell content
+                   batchIdCell.textContent = response.data.Batch_Number;
+                   totalBarcode.textContent = 1;
+                   itemDesc.textContent = response.data.Item.display_value;
+                   Mrp.textContent = responseObject.mrp;
+                   packdates.textContent = responseObject.pack_date;
+                   // Set the text and click event handler for the Print button
+                   printButton.textContent = 'Print';
+                   printButton.className = "btn btn-primary print-button";
+                   printButton.id = "print-button";
+                   printButton.type = "button";
+                   // Append cells and button to the row
+                   printButtonCell.appendChild(printButton);
+                   row.appendChild(itemDesc);
+                   row.appendChild(batchIdCell);
+                   row.appendChild(printButtonCell);
+                   row.appendChild(totalBarcode);
+                   row.appendChild(Mrp);
+                   row.appendChild(packdates);
+                   // Append the row to the table body
+                   tableBody.appendChild(row);
+                   
+
+                     // Event delegation for the "Print" buttons
+                     const contentDiv = document.getElementById('content');
+                     $('#table-body').on('click', '.print-button', function () {
+                         // Find the closest <tr> element and then find the <td> with Batch ID
+                        // const batchSerialNumber = row.querySelector('td:nth-child(2)').textContent;
+                         const batchId = $(this).closest('tr').find('td:nth-child(2)').text();
+                         console.log('Batch ID:', batchId);
+                         var item_name;
+                         item_name = response.data.Item.display_value;
+                         console.log(item_name);
+                         var barcode_value = response.data.Barcode_Value;
+                         var pack_date = response.data.Pack_Date;
+                         var manu_batch = response.data.Manufacture_Batch_Code;
+                         var mrp = response.data.MRP;
+                         var item_code = responseObject.manu_product_code ;
+                         var pack_code = itemresp.data.Pack_Master.display_value+" "+itemresp.data.CDS;
+                         var product_name = itemresp.data.Product_Name.display_value;
+                         var bill_details = responseObject.bill_no+formattedbDate+formattedrcvDate;
+                         var color_code = itemresp.data.Brand.display_value+" "+itemresp.data.RM_Code+" "+itemresp.data.RM_Color;
+                         var numbers = 1;
+                         var len = numbers.length;
+                         var sku = response.data.SKU.display_value;
+                         console.log(barcode_value +","+pack_date+","+manu_batch+","+mrp);
+                         var spaces = "   ";
+                         ///Print content concatinate in a long string///
+                         //var start =  '\x02'+'m\n'+'\x02L\nD11\nH18';
+                         var start =  '~m|\n'+'~L|\nD11|\nH18|';
+                         var printcode = "\n191100202000025"+spaces+pack_date+" "+manu_batch+" "+mrp+"|\n191100101770080"+color_code+"|\n191100101550080"+product_name+"|\n1e6108100720090"+barcode_value+"|\n291100301500335SPH|\n191100300320085 "+batchId+"|\n191100100110060*"+bill_details+"*|\n491100100200050"+item_code+"|\n491100200470080"+pack_code+"|";
+                         var eject = "\nQ0001|\nE|";
+                         var next = "\nC0420|";
+                         var contentToPrint ;
+                         if(numbers == 1)
+                         {
+                            contentToPrint = start+printcode+eject;
+                         }
+                         printContent(contentToPrint);
+});
+                        function printContent(content) {
+                          const printWindow = window.open('', '_blank');
+                          printWindow.document.open();
+                          /////
+                          const contentWithLineBreaks = content.replace(/\n/g, '<br>');
+                          // Write the modified content to the new window
+                          printWindow.document.write(contentWithLineBreaks);
+                          //
+                        //  printWindow.document.write(content);
+                          printWindow.document.close();
+                          printWindow.print();
+                        }
+                 }  }) ;
+                }); }
            });    
       
         
+          
 		
     });
